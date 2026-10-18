@@ -37,8 +37,10 @@ estiverem ativos). Qualquer servidor estático serve.
    *Redirect URLs*. Os links de confirmação e de troca de senha voltam para lá.
 5. Em **Project Settings → API Keys**, copie a URL e a chave **publishable** (nunca a secret/service_role) para
    `js/config.js`.
-6. Entre com o e-mail admin em “Primeiro acesso”. Os outros membros você adiciona em **Ajustes → Equipe**,
-   e cada um faz o “Primeiro acesso” com o mesmo e-mail.
+6. Crie o login do admin em **Authentication → Users → Add user** (Auto Confirm User) e entre no painel.
+7. Publique a Edge Function `supabase/functions/equipe/index.ts` (nome `equipe`, verificação de JWT
+   desligada). A partir daí o admin cria os logins da equipe pelo painel, em **Ajustes → Equipe → Adicionar**
+   (senha inicial), troca senhas e remove pessoas sem abrir o Supabase.
 
 Segurança: toda tabela tem RLS. Só quem está em `membros` lê ou grava; só admin mexe na equipe. Criar conta
 sem estar na equipe não dá acesso a nada.

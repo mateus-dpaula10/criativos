@@ -59,6 +59,19 @@ function cliente() {
 
 const appUrl = () => `${location.origin}${location.pathname}`;
 
+/** Chama uma Edge Function e traduz o erro que ela devolve ({ erro }) em mensagem para a tela. */
+async function chamarFuncao(nome, body, semResposta) {
+  const c = await cliente();
+  const { data, error } = await c.functions.invoke(nome, { body });
+  if (error) {
+    let msg = '';
+    try { msg = (await error.context?.json?.())?.erro || ''; } catch { /* resposta sem JSON */ }
+    if (!msg) msg = /fetch|send a request|relay|not found/i.test(error.message || '') ? semResposta : (error.message || 'Falhou.');
+    throw new Error(msg);
+  }
+  return data;
+}
+
 const supa = {
   async listar(tabela, { ordem, onde } = {}) {
     const c = await cliente();
@@ -110,19 +123,9 @@ const supa = {
     return new Map(data.filter((d) => d.signedUrl).map((d) => [d.path, d.signedUrl]));
   },
   /** Chama a Edge Function "ia". Devolve { resultado, modelo, uso }. */
-  async ia(acao, dados) {
-    const c = await cliente();
-    const { data, error } = await c.functions.invoke('ia', { body: { acao, dados } });
-    if (error) {
-      let msg = '';
-      try { msg = (await error.context?.json?.())?.erro || ''; } catch { /* resposta sem JSON */ }
-      if (!msg) msg = /fetch|send a request|relay/i.test(error.message || '')
-        ? 'A IA não respondeu. A função "ia" já foi publicada no Supabase?'
-        : (error.message || 'A IA falhou.');
-      throw new Error(msg);
-    }
-    return data;
-  },
+  ia: (acao, dados) => chamarFuncao('ia', { acao, dados }, 'A IA não respondeu. A função "ia" já foi publicada no Supabase?'),
+  /** Edge Function "equipe" (só admin): adicionar (cria o login), senha, remover. */
+  equipe: (acao, dados) => chamarFuncao('equipe', { acao, ...dados }, 'A função "equipe" não respondeu. Ela já foi publicada no Supabase?'),
   /** Uso da IA desde uma data (ISO). */
   async usoIA(desde) {
     const c = await cliente();
@@ -330,6 +333,16 @@ const local = {
     return m;
   },
   async ia() { falhar('A IA só funciona com o painel conectado ao Supabase.'); },
+  /** Modo local: não há logins; só mexe na lista da equipe. */
+  async equipe(acao, { email, nome, papel }) {
+    const db = lerLocal();
+    if (acao === 'adicionar') {
+      db.membros = db.membros.filter((m) => m.email !== email);
+      db.membros.push({ email, nome: nome || '', papel: papel || 'editor', criado_em: new Date().toISOString() });
+    } else if (acao === 'remover') db.membros = db.membros.filter((m) => m.email !== email);
+    gravarLocal(db);
+    return { ok: true, loginExistia: false, loginApagado: false };
+  },
   async usoIA() { return []; },
   async ouvir(aoMudar) {
     const fn = (e) => { if (e.key === CHAVE_LOCAL) aoMudar('tudo'); };

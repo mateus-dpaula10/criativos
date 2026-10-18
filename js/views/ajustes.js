@@ -1,10 +1,11 @@
 // Ajustes: conta e tema, modelo do nome dos anúncios, campanhas e equipe (só admin mexe na equipe).
 import {
-  state, ehAdmin, salvarAjustes, salvarCampanha, excluirCampanha, salvarMembro, removerMembro, carregarTudo,
+  state, ehAdmin, salvarAjustes, salvarCampanha, excluirCampanha, salvarMembro, carregarTudo,
+  adicionarNaEquipe, definirSenha, removerDaEquipe,
 } from '../store.js';
 import { api, MODO_LOCAL } from '../api.js';
 import { VARIAVEIS_MODELO, MODELO_PADRAO, nomeAnuncio, custoIA } from '../domain.js';
-import { esc, plural, fmtNum } from '../utils.js';
+import { esc, plural, fmtNum, copiar } from '../utils.js';
 import { toast, enquanto, confirmDialog, openDialog, sheetHeader, limparRascunho } from '../ui.js';
 import { icon } from '../icons.js';
 import { aplicarTema, lerTema } from '../tema.js';
@@ -102,7 +103,7 @@ export function render() {
         <span class="lista-txt"><strong>${esc(m.nome || m.email)}</strong> <span class="muted small">${esc(m.email)} · ${PAPEIS[m.papel]}</span></span>
         ${admin ? `<button type="button" class="icon-btn small" data-editar-membro="${esc(m.email)}" aria-label="Editar ${esc(m.nome || m.email)}">${icon('edit', { size: 18 })}</button>` : ''}
       </li>`).join('')}</ul>
-      ${admin ? '<p class="field-hint">A pessoa entra pelo “Primeiro acesso” com o mesmo e-mail cadastrado aqui. Papel é só informativo, exceto Admin (gerencia a equipe).</p>' : ''}
+      ${admin ? '<p class="field-hint">“Adicionar” cria o login com uma senha inicial e já libera o acesso. Papel é só informativo, exceto Admin (gerencia a equipe).</p>' : ''}
     </section>`;
 }
 
@@ -145,6 +146,38 @@ function dialogoCampanha(c) {
   });
 }
 
+/** Senha aleatória fácil de ditar (sem caracteres parecidos como l/1, O/0). */
+function gerarSenha(tam = 12) {
+  const letras = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.getRandomValues(new Uint32Array(tam));
+  return [...bytes].map((n) => letras[n % letras.length]).join('');
+}
+
+const campoSenha = (id, rotulo, dica) => `<label class="field" for="${id}"><span class="field-label">${rotulo}</span>
+  <span class="inline"><input id="${id}" name="senha" type="text" minlength="8" autocomplete="new-password" spellcheck="false" data-nao-suja>
+  <button type="button" class="btn ghost small" data-gerar="${id}">Gerar</button></span>
+  <span class="field-hint">${dica}</span></label>`;
+
+/** Depois de criar: o acesso pronto para copiar e mandar para a pessoa. */
+function mostrarAcesso(dlg, { email, senha, loginExistia }) {
+  const endereco = `${location.origin}${location.pathname}`;
+  const texto = loginExistia
+    ? `Acesso ao painel de Criativos liberado.\nEndereço: ${endereco}\nE-mail: ${email}\n(use a senha que você já tinha)`
+    : `Seu acesso ao painel de Criativos:\nEndereço: ${endereco}\nE-mail: ${email}\nSenha: ${senha}\nTroque a senha em Ajustes depois de entrar.`;
+  dlg.innerHTML = `<div class="sheet-body">
+    ${sheetHeader('Pessoa adicionada')}
+    <p>${loginExistia ? `${esc(email)} já tinha login: foi só colocada na equipe, com a senha de antes.` : 'Login criado e liberado na equipe. Mande o acesso abaixo para a pessoa:'}</p>
+    <pre class="acesso">${esc(texto)}</pre>
+    <div class="actions">
+      <button type="button" class="btn ghost" data-close>Fechar</button>
+      <button type="button" class="btn primary" data-copiar-acesso>${icon('copy', { size: 18 })}Copiar acesso</button>
+    </div></div>`;
+  dlg.querySelector('[data-close]').addEventListener('click', () => dlg.close());
+  dlg.querySelector('[data-copiar-acesso]').addEventListener('click', async () => {
+    if (await copiar(texto)) toast('Acesso copiado.', { timeout: 2000 });
+  });
+}
+
 function dialogoMembro(m) {
   const eu = m?.email === state.membro.email;
   const dlg = openDialog(`
@@ -155,26 +188,80 @@ function dialogoMembro(m) {
       <label class="field" for="mb-papel"><span class="field-label">Papel</span><select id="mb-papel" name="papel" ${eu ? 'disabled' : ''}>
         ${Object.entries(PAPEIS).map(([k, v]) => `<option value="${k}" ${(m?.papel || 'editor') === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
         ${eu ? '<span class="field-hint">Você não pode tirar o seu próprio acesso de admin.</span>' : ''}</label>
+      ${MODO_LOCAL ? '' : m
+        ? (eu ? '' : campoSenha('mb-senha', 'Nova senha <small>(opcional)</small>', 'Preencha só para trocar a senha dela. Mínimo 8 caracteres.'))
+        : campoSenha('mb-senha', 'Senha inicial', 'Mínimo 8 caracteres. A pessoa pode trocar depois em Ajustes.')}
       <div class="actions">
         ${m && !eu ? '<button type="button" class="btn link danger-text" data-remover>Remover da equipe</button>' : ''}
         <button type="button" class="btn ghost" data-close>Cancelar</button>
-        <button type="submit" class="btn primary">Salvar</button>
+        <button type="submit" class="btn primary">${m ? 'Salvar' : 'Criar acesso'}</button>
+      </div>
+    </form>`);
+  const f = dlg.querySelector('form');
+  dlg.querySelector('[data-gerar]')?.addEventListener('click', (e) => {
+    f.querySelector(`#${e.currentTarget.dataset.gerar}`).value = gerarSenha();
+  });
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = f.email.value.trim().toLowerCase();
+    const nome = f.nome.value.trim();
+    const papel = eu ? 'admin' : f.papel.value;
+    const senha = f.senha?.value.trim() || '';
+    if (!/^\S+@\S+\.\S+$/.test(email)) { toast('Digite um e-mail válido.', { tone: 'alert' }); return; }
+    if ((!m && !MODO_LOCAL) || senha) {
+      if (senha.length < 8) { toast('A senha precisa ter pelo menos 8 caracteres (ou clique em Gerar).', { tone: 'alert' }); f.senha.focus(); return; }
+    }
+    if (!m) {
+      const r = await enquanto(e.submitter, () => adicionarNaEquipe({ email, nome, papel, senha }));
+      if (r) { if (MODO_LOCAL) { dlg.close(); toast('Adicionado à equipe.'); } else mostrarAcesso(dlg, { email, senha, loginExistia: r.loginExistia }); }
+      return;
+    }
+    const ok = await enquanto(e.submitter, async () => {
+      await salvarMembro({ email, nome, papel });
+      if (senha) await definirSenha(email, senha);
+      return true;
+    });
+    if (ok) { dlg.close(); toast(senha ? `Dados salvos e senha de ${esc(email)} trocada.` : 'Dados salvos.'); }
+  });
+  dlg.querySelector('[data-remover]')?.addEventListener('click', () => {
+    const corpo = dlg.querySelector('.sheet-body');
+    corpo.innerHTML = `${sheetHeader('Remover da equipe?')}
+      <p>${esc(m.email)} perde o acesso ao painel na hora. Os criativos e comentários dela continuam.</p>
+      ${MODO_LOCAL ? '' : '<label class="check"><input type="checkbox" id="rm-login"><span>Apagar também o login <small>(para voltar, será preciso criar de novo)</small></span></label>'}
+      <div class="actions">
+        <button type="button" class="btn ghost" data-close>Cancelar</button>
+        <button type="button" class="btn danger" data-confirmar>Remover</button>
+      </div>`;
+    corpo.querySelector('[data-close]').addEventListener('click', () => dlg.close());
+    corpo.querySelector('[data-confirmar]').addEventListener('click', async (e) => {
+      const apagar = corpo.querySelector('#rm-login')?.checked || false;
+      const r = await enquanto(e.currentTarget, () => removerDaEquipe(m.email, apagar));
+      if (r) { dlg.close(); toast(r.loginApagado ? 'Removido da equipe e login apagado.' : 'Removido da equipe.'); }
+    });
+  });
+}
+
+/** Trocar a própria senha, direto (sem depender de e-mail). */
+function dialogoMinhaSenha() {
+  const dlg = openDialog(`
+    <form class="sheet-body" novalidate>
+      ${sheetHeader('Trocar minha senha')}
+      <label class="field" for="ms-nova"><span class="field-label">Senha nova</span>
+        <input id="ms-nova" name="nova" type="password" minlength="8" autocomplete="new-password" required autofocus></label>
+      <label class="field" for="ms-conf"><span class="field-label">Repita a senha nova</span>
+        <input id="ms-conf" name="conf" type="password" minlength="8" autocomplete="new-password" required></label>
+      <div class="actions">
+        <button type="button" class="btn ghost" data-close>Cancelar</button>
+        <button type="submit" class="btn primary">Trocar senha</button>
       </div>
     </form>`);
   const f = dlg.querySelector('form');
   f.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = f.email.value.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(email)) { toast('Digite um e-mail válido.', { tone: 'alert' }); return; }
-    const ok = await enquanto(e.submitter, async () => {
-      await salvarMembro({ email, nome: f.nome.value.trim(), papel: eu ? 'admin' : f.papel.value }, { novo: !m });
-      return true;
-    });
-    if (ok) { dlg.close(); if (!m) toast(`${esc(email)} pode entrar pelo “Primeiro acesso”.`, { timeout: 7000 }); }
-  });
-  dlg.querySelector('[data-remover]')?.addEventListener('click', async () => {
-    const ok = await confirmDialog({ title: 'Remover da equipe?', text: `${esc(m.email)} perde o acesso ao painel na hora. Os criativos dele continuam.`, confirmLabel: 'Remover', danger: true });
-    if (ok) await enquanto(null, () => removerMembro(m.email));
+    if (f.nova.value.length < 8) { toast('A senha precisa ter pelo menos 8 caracteres.', { tone: 'alert' }); return; }
+    if (f.nova.value !== f.conf.value) { toast('As duas senhas não são iguais.', { tone: 'alert' }); return; }
+    const ok = await enquanto(e.submitter, async () => { await api.novaSenha(f.nova.value); return true; });
+    if (ok) { dlg.close(); toast('Senha trocada. Use a nova no próximo acesso.'); }
   });
 }
 
@@ -247,10 +334,8 @@ export function mount(root) {
       if (r === 'accepted') toast('App instalado. Procure o ícone “Criativos”.');
     }
     else if ('sair' in d) { await api.sair(); location.reload(); }
-    else if ('senha' in d) {
-      const ok = await enquanto(b, async () => { await api.recuperar(state.membro.email); return true; });
-      if (ok) toast(`Enviamos um link para ${esc(state.membro.email)} criar a senha nova.`, { timeout: 7000 });
-    } else if ('restaurar' in d) {
+    else if ('senha' in d) dialogoMinhaSenha();
+    else if ('restaurar' in d) {
       const ok = await confirmDialog({ title: 'Restaurar exemplos?', text: 'Tudo o que você fez no modo local é apagado e os dados de exemplo voltam.', confirmLabel: 'Restaurar', danger: true });
       if (ok) { api.restaurarExemplo(); await carregarTudo(); toast('Exemplos restaurados.'); }
     }

@@ -32,7 +32,7 @@ A conta é criada pelo admin; você só entra com o e-mail e a senha que recebeu
 1. Abra o endereço do painel e preencha e-mail e senha em **Entrar no painel**.
 2. No primeiro acesso, um **tour** mostra cada parte da tela. Dá para pular e refazer depois em **Ajustes → Refazer o tour**.
 3. Em **Ajustes → Sua conta** você escolhe o tema (automático, claro ou escuro) e encontra o botão **Sair**.
-4. Para trocar a senha, peça ao admin. O envio de e-mail ainda não está ligado, então o “Esqueci a senha” não chega por enquanto.
+4. Para trocar a senha, vá em **Ajustes → Sua conta → Trocar senha**. Se esqueceu a senha, peça ao admin para definir uma nova (o “Esqueci a senha” por e-mail ainda não está ligado).
 
 Se aparecer **“Acesso ainda não liberado”**, seu login existe mas seu e-mail ainda não foi colocado na equipe: peça ao admin para adicionar em Ajustes → Equipe e clique em **Tentar de novo**.
 
@@ -193,12 +193,12 @@ Em Ajustes ficam as configurações da equipe; o que muda aqui vale para todos, 
 
 | Bloco | O que fazer |
 | --- | --- |
-| Sua conta | Tema (automático, claro, escuro), **Refazer o tour** e **Sair** |
+| Sua conta | Tema (automático, claro, escuro), **Instalar app**, **Refazer o tour**, **Trocar senha** e **Sair** |
 | IA neste mês | Chamadas, tokens e custo estimado da IA no mês |
 | Nome dos anúncios | Modelo do nome, montado com as variáveis (clique numa para inserir). `{codigo}` é obrigatório. Padrão: `{campanha}_{codigo}_{angulo}_{data}` |
 | Pasta padrão dos clipes | Pasta que o montador de variações já traz preenchida |
 | Campanhas | Abrigos, ofertas ou produtos. A **sigla** entra no nome do anúncio; a **cor** marca os cartões. Desmarque **Ativa** para esconder sem apagar. |
-| Equipe (só admin) | **Adicionar** e-mail, nome e papel; editar ou **Remover da equipe**. Quem é removido perde o acesso na hora. |
+| Equipe (só admin) | **Adicionar** cria o login (e-mail, nome, papel e senha inicial) e libera o acesso; no fim, **Copiar acesso** gera a mensagem para mandar à pessoa. Editar permite trocar nome, papel e **definir uma senha nova**. **Remover da equipe** tira o acesso na hora e, se marcado, apaga o login. |
 
 **Cadastre as campanhas antes dos primeiros criativos.** Trocar a sigla ou o modelo depois muda o nome que o painel mostra, mas os anúncios já publicados no Meta continuam com o nome antigo. Os resultados continuam casando, porque o que vale é o código.
 
@@ -212,15 +212,13 @@ O painel roda em três serviços gratuitos; esta seção é para o admin.
 | Cloudflare (Worker `criativos`) | O site publicado | dash.cloudflare.com → Workers e Pages |
 | GitHub | O código | [mateus-dpaula10/criativos](https://github.com/mateus-dpaula10/criativos) |
 
-**Adicionar uma pessoa:**
+**Adicionar uma pessoa:** Painel → **Ajustes → Equipe → Adicionar**: e-mail, nome, papel e senha inicial (ou **Gerar**) → **Criar acesso** → **Copiar acesso** e mande para a pessoa. O login é criado já confirmado.
 
-1. Supabase → **Authentication → Users → Add user → Create new user**: e-mail, senha e **Auto Confirm User** marcado.
-2. Painel → **Ajustes → Equipe → Adicionar**, com o mesmo e-mail e o papel.
-3. Passe o endereço, o e-mail e a senha para a pessoa.
+**Trocar a senha de alguém:** Ajustes → Equipe → editar a pessoa → **Nova senha** → Salvar.
 
-**Trocar a senha de alguém:** Supabase → Authentication → Users → a pessoa → defina uma senha nova.
+**Remover uma pessoa:** Ajustes → Equipe → editar → **Remover da equipe** (perde o acesso na hora); marque “Apagar também o login” para excluir a conta.
 
-**Remover uma pessoa:** Ajustes → Equipe → Remover (perde o acesso na hora). Para apagar o login também, Supabase → Authentication → Users → Delete.
+Essas três ações usam a função `equipe` do Supabase (Edge Functions → `equipe`, verificação de JWT desligada). Ela só atende admins e usa a chave de administrador que o próprio Supabase entrega às funções.
 
 **Ligar a IA:**
 
@@ -236,7 +234,7 @@ O painel roda em três serviços gratuitos; esta seção é para o admin.
 
 | O que aparece | Por que | O que fazer |
 | --- | --- | --- |
-| “E-mail ou senha incorretos” | Senha errada ou login não criado | Confira com o admin; ele redefine a senha no Supabase |
+| “E-mail ou senha incorretos” | Senha errada ou login não criado | O admin define uma senha nova em Ajustes → Equipe |
 | “Acesso ainda não liberado” | O e-mail não está na equipe | Admin adiciona em Ajustes → Equipe; depois **Tentar de novo** |
 | “A IA ainda não foi ligada” ou “sem crédito” | Falta a chave ou o crédito da Anthropic | Admin segue “Ligar a IA” |
 | “Este navegador não consegue ler esse vídeo” | Vídeo em formato que o Chrome não abre (ex.: ProRes, .mov) | Exporte em MP4 H.264 |

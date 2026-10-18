@@ -166,10 +166,23 @@ export async function salvarMembro(dados, { novo = false } = {}) {
   avisar('local');
 }
 
-export async function removerMembro(email) {
-  await api.apagar('membros', 'email', email);
+/** Cria o login (senha inicial, já confirmado) e coloca a pessoa na equipe. { loginExistia } se ela já tinha login. */
+export async function adicionarNaEquipe({ email, nome, papel, senha }) {
+  const r = await api.equipe('adicionar', { email: email.trim().toLowerCase(), nome, papel, senha });
+  state.membros = await api.listar('membros', { ordem: 'nome' });
+  avisar('local');
+  return r;
+}
+
+/** Admin define uma senha nova para alguém da equipe. */
+export const definirSenha = (email, senha) => api.equipe('senha', { email, senha });
+
+/** Tira da equipe (perde o acesso na hora) e, se pedido, apaga o login também. */
+export async function removerDaEquipe(email, apagarLogin = false) {
+  const r = await api.equipe('remover', { email, apagarLogin });
   state.membros = state.membros.filter((m) => m.email !== email);
   avisar('local');
+  return r;
 }
 
 export async function salvarAjustes(patch) {
