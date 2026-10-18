@@ -55,6 +55,16 @@ sem estar na equipe não dá acesso a nada.
      Desligue a verificação de JWT da função: ela mesma confere o login e se a pessoa está na equipe.
 - O uso do mês (chamadas, tokens, custo estimado) aparece em Ajustes.
 
+## App instalável (PWA)
+
+- Instala no celular e no computador (Ajustes → Instalar app; no iPhone, Safari → Compartilhar → Adicionar à
+  Tela de Início). Atalhos no ícone: Novo criativo e Quadro.
+- `sw.js` guarda a interface no aparelho: abre na hora e sem internet (os dados continuam vindo do Supabase).
+- A cada publicação na Cloudflare, `scripts/versionar.mjs` (build do `wrangler.jsonc`) carimba no `sw.js` a
+  versão (commit) e a lista de arquivos; o app aberto mostra "Nova versão do painel disponível · Atualizar".
+- No PC o `sw.js` fica com `__VERSAO__` (modo desenvolvimento: tudo vem da rede). Não commite um `sw.js`
+  carimbado.
+
 ## Publicar
 
 Igual à Caderneta: suba a pasta como está (sem build) no Cloudflare Pages, ou sirva por qualquer host estático.

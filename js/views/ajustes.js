@@ -9,8 +9,21 @@ import { toast, enquanto, confirmDialog, openDialog, sheetHeader, limparRascunho
 import { icon } from '../icons.js';
 import { aplicarTema, lerTema } from '../tema.js';
 import { iniciarTour } from '../tour.js';
+import { instalacao } from '../pwa.js';
 
 const PAPEIS = { admin: 'Admin', editor: 'Edição', trafego: 'Tráfego' };
+
+function blocoInstalar() {
+  if (instalacao.instalado()) return '<p class="muted small">Aberto como app instalado neste aparelho.</p>';
+  if (instalacao.disponivel()) {
+    return `<button type="button" class="btn primary small" data-instalar>${icon('download', { size: 18 })}Instalar app</button>
+      <p class="field-hint">Fica com ícone na tela inicial e abre em tela cheia, como um aplicativo.</p>`;
+  }
+  if (instalacao.ios()) return '<p class="field-hint">Para instalar no iPhone: no Safari, toque em <strong>Compartilhar</strong> e depois em <strong>Adicionar à Tela de Início</strong>.</p>';
+  return '<p class="field-hint">Para instalar: no menu do navegador, procure <strong>Instalar app</strong> ou <strong>Adicionar à tela inicial</strong>.</p>';
+}
+
+let pararInstalar = null;
 
 function previaNome(modelo) {
   const exemplo = state.criativos[0] || { numero: 42, angulo: 'Dor', titulo: 'Exemplo', formatos: ['9x16'] };
@@ -39,6 +52,7 @@ export function render() {
         <fieldset class="segmented small" data-nao-suja><legend class="field-label">Tema</legend>
           ${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Escuro']].map(([v, l]) => `<label><input type="radio" name="tema" value="${v}" ${tema === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}
         </fieldset>
+        <div class="instalar" id="instalar">${blocoInstalar()}</div>
         <div class="actions left">
           <button type="button" class="btn ghost small" data-tour>Refazer o tour</button>
           ${MODO_LOCAL ? '' : `<button type="button" class="btn ghost small" data-senha>Trocar senha</button>
@@ -184,6 +198,11 @@ async function mostrarUsoIA(el) {
 }
 
 export function mount(root) {
+  pararInstalar?.();
+  pararInstalar = instalacao.aoMudar(() => {
+    const el = document.getElementById('instalar');
+    if (el) el.innerHTML = blocoInstalar();
+  });
   const usoEl = root.querySelector('#ia-uso');
   if (usoEl) mostrarUsoIA(usoEl);
   const form = root.querySelector('#form-modelo');
@@ -223,6 +242,10 @@ export function mount(root) {
     else if ('novoMembro' in d) dialogoMembro(null);
     else if (d.editarMembro) dialogoMembro(state.membros.find((m) => m.email === d.editarMembro));
     else if ('tour' in d) iniciarTour();
+    else if ('instalar' in d) {
+      const r = await instalacao.pedir();
+      if (r === 'accepted') toast('App instalado. Procure o ícone “Criativos”.');
+    }
     else if ('sair' in d) { await api.sair(); location.reload(); }
     else if ('senha' in d) {
       const ok = await enquanto(b, async () => { await api.recuperar(state.membro.email); return true; });

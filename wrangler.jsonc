@@ -1,9 +1,13 @@
-// Publicação na Cloudflare (Workers com arquivos estáticos). O painel não tem build:
-// a própria pasta é servida; o que não é site fica de fora pelo .assetsignore.
+// Publicação na Cloudflare (Workers com arquivos estáticos). O painel não tem build de verdade: a própria
+// pasta é servida; o que não é site fica de fora pelo .assetsignore. O "build" só carimba a versão no
+// service worker (scripts/versionar.mjs) para o app instalado oferecer "Atualizar" a cada publicação.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "criativos",
   "compatibility_date": "2026-09-01",
+  "build": {
+    "command": "node scripts/versionar.mjs"
+  },
   "assets": {
     "directory": "."
   }

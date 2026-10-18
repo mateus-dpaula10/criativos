@@ -14,6 +14,7 @@ import * as ajustes from './views/ajustes.js';
 import { telaEntrar, telaPendente, pedirNovaSenha } from './views/entrar.js';
 import { abrirNovoCriativo } from './views/novo.js';
 import { iniciarTour, tourVisto } from './tour.js';
+import { registrarSW, vigiarConexao } from './pwa.js';
 
 // Retorno de link de e-mail (confirmação/convite/recuperação): lê os tokens e limpa a URL ANTES do roteador.
 capturarRetornoEmail();
@@ -163,6 +164,13 @@ async function entrarNoApp(usuario) {
   ultimaRota = '';
   render();
   ouvirMudancas().catch((err) => console.warn('[criativos] tempo real indisponível:', err.message));
+  // Atalho do app instalado ("Novo criativo", segurando o ícone): ?acao=novo abre o formulário direto.
+  const params = new URLSearchParams(location.search);
+  if (params.get('acao') === 'novo') {
+    history.replaceState(null, '', `${location.pathname}${location.hash || '#/quadro'}`);
+    abrirNovoCriativo();
+    return;
+  }
   if (!tourVisto() && !pedirSenhaPendente) setTimeout(iniciarTour, 400);
 }
 
@@ -171,6 +179,8 @@ async function boot() {
   montarNav();
   eventos();
   if (MODO_LOCAL) document.getElementById('faixa-local').hidden = false;
+  vigiarConexao(toast);
+  registrarSW((aplicar) => toast('Nova versão do painel disponível.', { timeout: 0, action: { label: 'Atualizar', run: aplicar } }));
 
   const retorno = pegarRetornoEmail();
   if (retorno?.tipo === 'erro') {

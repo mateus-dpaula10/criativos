@@ -11,3 +11,4 @@ node_modules
 supabase
 tests
 docs
+scripts
