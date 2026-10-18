@@ -1,0 +1,10 @@
+// Publicação na Cloudflare (Workers com arquivos estáticos). O painel não tem build:
+// a própria pasta é servida; o que não é site fica de fora pelo .assetsignore.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "criativos",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "."
+  }
+}
