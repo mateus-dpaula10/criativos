@@ -596,3 +596,26 @@ dialog.sheet:has(.ia) { width: min(760px, 100vw); }
 .ia-itens p { margin: 2px 0 0; }
 .ia-marca { flex: none; margin-top: 1px; }
 .ia-sugestoes { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+
+/* ---------- Tour ---------- */
+.tour { position: fixed; inset: 0; z-index: 2000; }
+.tour-foco {
+  position: fixed; border-radius: 12px; pointer-events: none;
+  box-shadow: 0 0 0 3px var(--accent), 0 0 0 9999px rgba(20, 17, 18, .62);
+  transition: left .25s ease, top .25s ease, width .25s ease, height .25s ease;
+}
+.tour-cartao {
+  position: fixed; width: min(380px, calc(100vw - 32px)); background: var(--surface); color: var(--ink);
+  border-radius: 16px; padding: 16px 18px 14px; box-shadow: var(--shadow); border: 1px solid var(--line);
+}
+.tour-cartao.centro { left: 50% !important; top: 50% !important; transform: translate(-50%, -50%); }
+@media (max-width: 639px) {
+  .tour-cartao, .tour-cartao.centro { left: 16px !important; right: 16px; width: auto; top: auto !important; transform: none; bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .tour-cartao.topo { top: calc(16px + env(safe-area-inset-top)) !important; bottom: auto; }
+}
+.tour-passo { font-size: .78rem; font-weight: 700; color: var(--muted); margin: 0 0 4px; letter-spacing: .02em; }
+.tour-titulo { font-size: 1.12rem; font-weight: 800; margin-bottom: 6px; }
+.tour-texto { color: var(--muted); margin: 0 0 12px; }
+.tour-acoes { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.tour-nav { display: flex; gap: 8px; margin-left: auto; }
+@media (prefers-reduced-motion: reduce) { .tour-foco { transition: none; } }

@@ -8,6 +8,7 @@ import { esc, plural, fmtNum } from '../utils.js';
 import { toast, enquanto, confirmDialog, openDialog, sheetHeader, limparRascunho } from '../ui.js';
 import { icon } from '../icons.js';
 import { aplicarTema, lerTema } from '../tema.js';
+import { iniciarTour } from '../tour.js';
 
 const PAPEIS = { admin: 'Admin', editor: 'Edição', trafego: 'Tráfego' };
 
@@ -38,9 +39,10 @@ export function render() {
         <fieldset class="segmented small" data-nao-suja><legend class="field-label">Tema</legend>
           ${[['auto', 'Automático'], ['light', 'Claro'], ['dark', 'Escuro']].map(([v, l]) => `<label><input type="radio" name="tema" value="${v}" ${tema === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}
         </fieldset>
-        ${MODO_LOCAL ? '' : `<div class="actions left">
-          <button type="button" class="btn ghost small" data-senha>Trocar senha</button>
-          <button type="button" class="btn ghost small" data-sair>${icon('logout', { size: 18 })}Sair</button></div>`}
+        <div class="actions left">
+          <button type="button" class="btn ghost small" data-tour>Refazer o tour</button>
+          ${MODO_LOCAL ? '' : `<button type="button" class="btn ghost small" data-senha>Trocar senha</button>
+          <button type="button" class="btn ghost small" data-sair>${icon('logout', { size: 18 })}Sair</button>`}</div>
       </section>
 
       <section class="block" aria-labelledby="h-nome">
@@ -220,6 +222,7 @@ export function mount(root) {
     else if (d.editarCampanha) dialogoCampanha(state.campanhas.find((c) => c.id === d.editarCampanha));
     else if ('novoMembro' in d) dialogoMembro(null);
     else if (d.editarMembro) dialogoMembro(state.membros.find((m) => m.email === d.editarMembro));
+    else if ('tour' in d) iniciarTour();
     else if ('sair' in d) { await api.sair(); location.reload(); }
     else if ('senha' in d) {
       const ok = await enquanto(b, async () => { await api.recuperar(state.membro.email); return true; });

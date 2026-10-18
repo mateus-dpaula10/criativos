@@ -13,6 +13,7 @@ import * as resultados from './views/resultados.js';
 import * as ajustes from './views/ajustes.js';
 import { telaEntrar, telaPendente, pedirNovaSenha } from './views/entrar.js';
 import { abrirNovoCriativo } from './views/novo.js';
+import { iniciarTour, tourVisto } from './tour.js';
 
 // Retorno de link de e-mail (confirmação/convite/recuperação): lê os tokens e limpa a URL ANTES do roteador.
 capturarRetornoEmail();
@@ -32,6 +33,7 @@ const fab = document.getElementById('fab');
 const authRoot = document.getElementById('auth-root');
 let ultimaRota = '';
 let avisoPendente = null;
+let pedirSenhaPendente = false; // voltou de um link de convite/recuperação: a senha vem antes do tour
 
 function lerHash() {
   const raw = location.hash.replace(/^#\/?/, '');
@@ -161,6 +163,7 @@ async function entrarNoApp(usuario) {
   ultimaRota = '';
   render();
   ouvirMudancas().catch((err) => console.warn('[criativos] tempo real indisponível:', err.message));
+  if (!tourVisto() && !pedirSenhaPendente) setTimeout(iniciarTour, 400);
 }
 
 async function boot() {
@@ -169,14 +172,13 @@ async function boot() {
   eventos();
   if (MODO_LOCAL) document.getElementById('faixa-local').hidden = false;
 
-  let pedirSenha = false;
   const retorno = pegarRetornoEmail();
   if (retorno?.tipo === 'erro') {
     toast(/expired|invalid/i.test(retorno.descricao) ? 'O link do e-mail expirou ou já foi usado. Peça outro.' : esc(retorno.descricao || 'Link inválido.'), { tone: 'alert', timeout: 9000 });
   } else if (retorno?.tipo === 'sessao') {
     try {
       await api.aplicarRetorno(retorno);
-      pedirSenha = retorno.evento === 'recovery' || retorno.evento === 'invite';
+      pedirSenhaPendente = retorno.evento === 'recovery' || retorno.evento === 'invite';
       if (retorno.evento === 'signup') toast('E-mail confirmado.');
     } catch (err) {
       toast(esc(err.message), { tone: 'alert', timeout: 9000 });
@@ -195,7 +197,7 @@ async function boot() {
 
   if (!usuario) { mostrarEntrar(); return; }
   await entrarNoApp(usuario);
-  if (pedirSenha) pedirNovaSenha({ titulo: 'Defina sua senha' });
+  if (pedirSenhaPendente) { pedirSenhaPendente = false; pedirNovaSenha({ titulo: 'Defina sua senha' }); }
 }
 
 boot();
