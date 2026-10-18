@@ -1,0 +1,14 @@
+{
+  "name": "Criativos",
+  "short_name": "Criativos",
+  "description": "Gestão dos criativos de vídeo da equipe de tráfego.",
+  "lang": "pt-BR",
+  "start_url": "./#/painel",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f4f2",
+  "theme_color": "#b42318",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Criativos</title>
+  <meta name="description" content="Gestão dos criativos de vídeo da equipe de tráfego: produção, nomes padrão, legendas, variações e resultados do Meta Ads.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#b42318" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141112" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    // Aplica o tema salvo antes da primeira pintura (evita "piscar" claro/escuro).
+    try {
+      var t = localStorage.getItem('criativos:theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+
+  <p class="faixa-local" id="faixa-local" hidden>Modo local: os dados ficam só neste navegador. <a href="#/ajustes">Como conectar a equipe</a></p>
+
+  <div class="shell" id="shell" hidden>
+    <nav class="nav" aria-label="Seções do painel">
+      <a class="brand" href="#/painel" aria-label="Criativos, início">
+        <img src="icons/icon.svg" alt="" width="32" height="32">
+        <span>Criativos</span>
+      </a>
+      <ul class="nav-list" id="nav-list"></ul>
+    </nav>
+    <main id="main" class="main" tabindex="-1"></main>
+  </div>
+
+  <div id="auth-root"><p class="carregando" role="status">Carregando…</p></div>
+
+  <button class="fab" id="fab" type="button" hidden aria-label="Novo criativo"></button>
+
+  <dialog id="generic-dialog" class="sheet" aria-labelledby="generic-dialog-title"></dialog>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+  <noscript>
+    <p style="padding:24px;font-family:system-ui">O painel de Criativos precisa de JavaScript ativado.</p>
+  </noscript>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
